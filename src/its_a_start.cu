@@ -46,10 +46,7 @@ __global__ backPropagationCUDA(float const ** const w, float const ** const b, f
 		}
 		
 	}
-
-	
-	
-	
-	
 	
 }
+
+int main() {}
