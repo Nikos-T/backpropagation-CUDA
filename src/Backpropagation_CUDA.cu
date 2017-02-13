@@ -35,9 +35,10 @@ __global__ void generate_rand_Kernel(float *array, unsigned int size, curandStat
 	unsigned int block_id = gridDim.x*gridDim.y*blockIdx.z + gridDim.x*blockIdx.y + blockIdx.x;
 	
 	unsigned int block_size = blockDim.x*blockDim.y*blockDim.z;
-	printf("block_id=%u, tid=%u\n", block_id, tid);
-	curandState localState = global_states[block_id*block_size+tid];
+	
 	if (block_size*block_id+tid < size) {
+		curandState localState = global_states[block_id*block_size+tid];
+		// printf("block_id=%u, tid=%u\n", block_id, tid);
 		array[block_id*block_size+tid] = curand_uniform(&localState);
 		global_states[block_id*block_size+tid] = localState;
 	}
@@ -153,6 +154,7 @@ if (biases == NULL) {
 	return -1;
 }
 
+// I could take the 2 max values instead of only one.
 unsigned int max_layer=0;
 for (unsigned int i=0; i<L; i++) {
 	if (max_layer<layer_sizes[i]) {
@@ -195,6 +197,7 @@ for (unsigned int i=0; i<L-1; i++) {
 	cudaMemcpy(biases[i], bias_D, layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
 	cudaFree(weight_D);
 	cudaFree(bias_D);
+	printf("\n========================\n");
 }
 
 for (unsigned int i=0; i<L-1; i++) {
