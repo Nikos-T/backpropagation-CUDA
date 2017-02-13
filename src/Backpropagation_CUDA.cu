@@ -35,7 +35,7 @@ __global__ void generate_rand_Kernel(float *array, unsigned int size, curandStat
 	unsigned int block_id = gridDim.x*gridDim.y*blockIdx.z + gridDim.x*blockIdx.y + blockIdx.x;
 	
 	unsigned int block_size = blockDim.x*blockDim.y*blockDim.z;
-	
+	printf("block_id=%u, tid=%u\n", block_id, tid);
 	curandState localState = global_states[block_id*block_size+tid];
 	if (block_size*block_id+tid < size) {
 		array[block_id*block_size+tid] = curand_uniform(&localState);
@@ -139,7 +139,7 @@ for (unsigned int i=0; i<L-1; i++) {
 	// printf("\n");
 }
 */
-}
+
 
 {	// Init rand neural network with CUDA
 float **weights = (float **)malloc(L*sizeof(float *)), **biases = (float **)malloc(L*sizeof(float *));
@@ -161,7 +161,7 @@ for (unsigned int i=0; i<L; i++) {
 }
 curandState *global_states;
 if (cudaMalloc((void **)&global_states, max_layer*max_layer*sizeof(curandState)) != cudaSuccess) {
-	printf("Could not allocate gpu memory to global_states.\nExiting...\n")
+	printf("Could not allocate gpu memory to global_states.\nExiting...\n");
 	return -2;
 }
 dim3 grid((max_layer+31)/32, (max_layer+31)/32);
@@ -211,4 +211,6 @@ for (unsigned int i=0; i<L-1; i++) {
 	}
 	printf("\n");
 }
+}
 
+}
