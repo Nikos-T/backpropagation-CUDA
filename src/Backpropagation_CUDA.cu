@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <cuda.h>
+#include <curand_kernel.h>
 
 typedef struct {
 	unsigned int seed;
@@ -17,19 +18,31 @@ void * init_rand_t(void *arg) {
 	pthread_exit(0);
 }
 
-__global__ void init_rand_Kernel(float *array, unsigned int size) {
+// http://aresio.blogspot.gr/2011/05/cuda-random-numbers-inside-kernels.html
+__global__ void setup_rand_Kernel(curandState *global_states, unsigned long seed) {
+	unsigned int tid = blockDim.x*blockDim.y*threadIdx.z + blockDim.x*threadIdx.y + threadIdx.x;
+	unsigned int block_id = gridDim.x*gridDim.y*blockIdx.z + gridDim.x*blockIdx.y + blockIdx.x;
+	
+	unsigned int block_size = blockDim.x*blockDim.y*blockDim.z;
+	
+	curand_init(seed, block_id*block_size+tid, 0, &global_states[block_id*block_size+tid]);
+	
+	
+}
+__global__ void generate_rand_Kernel(float *array, unsigned int size, curandState *global_states) {
 	
 	unsigned int tid = blockDim.x*blockDim.y*threadIdx.z + blockDim.x*threadIdx.y + threadIdx.x;
 	unsigned int block_id = gridDim.x*gridDim.y*blockIdx.z + gridDim.x*blockIdx.y + blockIdx.x;
 	
 	unsigned int block_size = blockDim.x*blockDim.y*blockDim.z;
 	
-	curandState localState = globalState[block_id*block_size+tid];
-	// if (block_size*block_id +tid < size) {
-	array[block_id*block_size + tid] = ((float)curand_uniform(&curandState))/((float)RAND_MAX);
-	// }
-	
+	curandState localState = global_states[block_id*block_size+tid];
+	if (block_size*block_id+tid < size) {
+		array[block_id*block_size+tid] = curand_uniform(&localState);
+		global_states[block_id*block_size+tid] = localState;
+	}
 }
+
 int main(int argc, char **argv) {
 /*	Usage:
 *	
@@ -140,14 +153,31 @@ if (biases == NULL) {
 	return -1;
 }
 
+unsigned int max_layer=0;
+for (unsigned int i=0; i<L; i++) {
+	if (max_layer<layer_sizes[i]) {
+		max_layer = layer_sizes[i];
+	}
+}
+curandState *global_states;
+if (cudaMalloc((void **)&global_states, max_layer*max_layer*sizeof(curandState)) != cudaSuccess) {
+	printf("Could not allocate gpu memory to global_states.\nExiting...\n")
+	return -2;
+}
+dim3 grid((max_layer+31)/32, (max_layer+31)/32);
+dim3 block(32, 32, 1);
+setup_rand_Kernel<<<grid, block>>>(global_states, time(NULL));
+
 for (unsigned int i=0; i<L-1; i++) {
 	weights[i] = (float *)malloc(layer_sizes[i]*layer_sizes[i+1]*sizeof(float));
 	if (cudaMalloc((void **)&weight_D,layer_sizes[i]*layer_sizes[i+1]*sizeof(float)) != cudaSuccess) {
 		printf("Could not allocate gpu memory to weight_D.\nExiting...\n");
+		return -2;
 	}
 	biases[i] = (float *)malloc(layer_sizes[i+1]*sizeof(float));
 	if (cudaMalloc((void **)&bias_D, layer_sizes[i+1]*sizeof(float)) != cudaSuccess) {
 		printf("Could not allocate gpu memory to bias_D.\nExiting...\n");
+		return -2;
 	}
 	if (weights[i] == NULL) {
 		printf("Could not allocate memory to weights[%u].\nExiting...\n", i);
@@ -157,15 +187,16 @@ for (unsigned int i=0; i<L-1; i++) {
 		printf("Could not allocate memory to biases[%u].\nExiting...\n", i);
 		return -1;
 	}
-	dim3 grid(layer_sizes[i], layer_sizes[i+1]);
-	init_rand_Kernel<<<grid, 1>>>(weight_D, layer_sizes[i]*layer_sizes[i+1]);
-	init_rand_Kernel<<<layer_sizes[i+1], 1>>>(bias_D, layer_sizes[i+1]);
+	grid.x = (layer_sizes[i]+31)/32;
+	grid.y = (layer_sizes[i+1]+31)/32;
+	generate_rand_Kernel<<<grid, block>>>(weight_D, layer_sizes[i]*layer_sizes[i+1], global_states);
+	generate_rand_Kernel<<<(layer_sizes[i+1]+31)/32, block>>>(bias_D, layer_sizes[i+1], global_states);
 	cudaMemcpy(weights[i], weight_D, layer_sizes[i]*layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(biases[i], bias_D, layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
 	cudaFree(weight_D);
 	cudaFree(bias_D);
-	
 }
+
 for (unsigned int i=0; i<L-1; i++) {
 	printf("Weights%u,%u:\n", i+1, i);
 	for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
