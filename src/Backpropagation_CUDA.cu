@@ -1,13 +1,13 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <cuda.h>
 
 typedef struct {
 	unsigned int seed;
 	unsigned int size;
 	float *array;
 }init_rand_struct;
-
 
 void * init_rand_t(void *arg) {
 	init_rand_struct *a = (init_rand_struct *)arg;
@@ -17,6 +17,19 @@ void * init_rand_t(void *arg) {
 	pthread_exit(0);
 }
 
+__global__ void init_rand_Kernel(float *array, unsigned int size) {
+	
+	unsigned int tid = blockDim.x*blockDim.y*threadIdx.z + blockDim.x*threadIdx.y + threadIdx.x;
+	unsigned int block_id = gridDim.x*gridDim.y*blockIdx.z + gridDim.x*blockIdx.y + blockIdx.x;
+	
+	unsigned int block_size = blockDim.x*blockDim.y*blockDim.z;
+	
+	curandState localState = globalState[block_id*block_size+tid];
+	// if (block_size*block_id +tid < size) {
+	array[block_id*block_size + tid] = ((float)curand_uniform(&curandState))/((float)RAND_MAX);
+	// }
+	
+}
 int main(int argc, char **argv) {
 /*	Usage:
 *	
@@ -51,7 +64,8 @@ if (argc == L+2) {
 }
 }
 
-{	// Init rand neural network
+/*
+{	// Init rand neural network with pthreads
 float **weights = (float **)malloc(L*sizeof(float *)), **biases = (float **)malloc(L*sizeof(float *));
 if (weights == NULL) {
 	printf("Could not allocate memory to weights.\nExiting...\n");
@@ -95,7 +109,63 @@ for (unsigned int i=0; i<L-1; i++) {
 }
 
 
-// debug
+// debug !OK working
+
+// for (unsigned int i=0; i<L-1; i++) {
+	// printf("Weights%u,%u:\n", i+1, i);
+	// for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
+		// for (unsigned int x=0; x<layer_sizes[i]; x++) {
+			// printf("%.2f,", weights[i][y*layer_sizes[i]+x]);
+		// }
+		// printf("\n");
+	// }
+	// printf("\nBiases%u:\n", i+1);
+	// for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
+		// printf("%.2f\n", biases[i][y]);
+	// }
+	// printf("\n");
+}
+*/
+}
+
+{	// Init rand neural network with CUDA
+float **weights = (float **)malloc(L*sizeof(float *)), **biases = (float **)malloc(L*sizeof(float *));
+float *weight_D, *bias_D;
+if (weights == NULL) {
+	printf("Could not allocate memory to weights.\nExiting...\n");
+	return -1;
+}
+if (biases == NULL) {
+	printf("Could not allocate memory to biases.\nExiting...\n");
+	return -1;
+}
+
+for (unsigned int i=0; i<L-1; i++) {
+	weights[i] = (float *)malloc(layer_sizes[i]*layer_sizes[i+1]*sizeof(float));
+	if (cudaMalloc((void **)&weight_D,layer_sizes[i]*layer_sizes[i+1]*sizeof(float)) != cudaSuccess) {
+		printf("Could not allocate gpu memory to weight_D.\nExiting...\n");
+	}
+	biases[i] = (float *)malloc(layer_sizes[i+1]*sizeof(float));
+	if (cudaMalloc((void **)&bias_D, layer_sizes[i+1]*sizeof(float)) != cudaSuccess) {
+		printf("Could not allocate gpu memory to bias_D.\nExiting...\n");
+	}
+	if (weights[i] == NULL) {
+		printf("Could not allocate memory to weights[%u].\nExiting...\n", i);
+		return -1;
+	}
+	if (biases[i] == NULL) {
+		printf("Could not allocate memory to biases[%u].\nExiting...\n", i);
+		return -1;
+	}
+	dim3 grid(layer_sizes[i], layer_sizes[i+1]);
+	init_rand_Kernel<<<grid, 1>>>(weight_D, layer_sizes[i]*layer_sizes[i+1]);
+	init_rand_Kernel<<<layer_sizes[i+1], 1>>>(bias_D, layer_sizes[i+1]);
+	cudaMemcpy(weights[i], weight_D, layer_sizes[i]*layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(biases[i], bias_D, layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaFree(weight_D);
+	cudaFree(bias_D);
+	
+}
 for (unsigned int i=0; i<L-1; i++) {
 	printf("Weights%u,%u:\n", i+1, i);
 	for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
@@ -109,10 +179,5 @@ for (unsigned int i=0; i<L-1; i++) {
 		printf("%.2f\n", biases[i][y]);
 	}
 	printf("\n");
-}
-}
-
-
-
 }
 
