@@ -100,13 +100,13 @@ for (unsigned int i=0; i<L-1; i++) {
 	printf("Weights%u,%u:\n", i+1, i);
 	for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
 		for (unsigned int x=0; x<layer_sizes[i]; x++) {
-			printf("%.2f,", weights[y*layer_sizes[i]+x]);
+			printf("%.2f,", weights[i][y*layer_sizes[i]+x]);
 		}
 		printf("\n");
 	}
 	printf("\nBiases%u:\n", i+1);
 	for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
-		printf("%.2f\n", biases[y]);
+		printf("%.2f\n", biases[i][y]);
 	}
 	printf("\n");
 }
