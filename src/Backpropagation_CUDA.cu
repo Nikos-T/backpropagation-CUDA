@@ -37,11 +37,11 @@ if ((argc != L+2) && (argc != 2)) {
 	return 1;
 }
 if (argc == L+2) {
-	for (unsigne int i=2; i<argc; i++) {
+	for (unsigned int i=2; i<argc; i++) {
 		layer_sizes[i-2] = atoi(argv[i]);
 	}
 } else {
-	fp = fopen("../data/layer_sizes.mydata");
+	fp = fopen("../data/layer_sizes.mydata", "r");
 	if (fp == NULL) {
 		printf("Error opening file layer_sizes.mydata.\nExiting...\n");
 		return -1;
