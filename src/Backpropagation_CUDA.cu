@@ -1,9 +1,10 @@
 #include <unistd.h>
 #include <stdio.h>
+
 typedef struct {
 	unsigned int seed;
 	unsigned int size;
-	float *array
+	float *array;
 }init_rand_struct;
 
 
