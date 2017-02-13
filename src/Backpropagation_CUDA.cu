@@ -16,8 +16,8 @@ if (layer_sizes==NULL) {
 	return -1;
 }
 
-if (argc != L+2) {
-	printf("Usage:\n./name_of_program L l1 l2 l3 ... lL\nWhere\nL is the length of the neural network\nand\nl1 l2 l3 ... lL the size of the corresponding layer.\nExiting...");
+if ((argc != L+2) && (argc != 2)) {
+	printf("Usage:\n./name_of_program L l1 l2 l3 ... lL\nOR\n./name_of_program L\nWhere\nL is the length of the neural network\nand\nl1 l2 l3 ... lL the size of the corresponding layer.\nIf no layer sizes are passed then the program will attempt to read them from \"../data/layer_sizes.mydata\"\nExiting...\n");
 	return 1;
 }
 
