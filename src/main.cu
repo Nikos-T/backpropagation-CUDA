@@ -49,7 +49,7 @@ if (argc == L+2) {
 
 
 {	// Init rand neural network with pthreads
-start = time(NULL);
+// start = time(NULL);
 weights = (float **)malloc(L*sizeof(float *));
 biases = (float **)malloc(L*sizeof(float *));
 if (weights == NULL) {
@@ -95,22 +95,22 @@ for (unsigned int i=0; i<L-1; i++) {
 
 
 // debug !OK working
-for (unsigned int i=0; i<L-1; i++) {
-printf("Weights%u,%u:\n", i+1, i);
-	for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
-		for (unsigned int x=0; x<layer_sizes[i]; x++) {
-			printf("%.4f,", weights[i][y*layer_sizes[i]+x]);
-		}
-		printf("\n");
-	}
-	printf("\nBiases%u:\n", i+1);
-	for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
-		printf("%.4f\n", biases[i][y]);
-	}
-	printf("\n");
-}
-end = time(NULL);
-printf("Time to compute with pthreads = %u\n", ((unsigned int)(end-start)));
+// for (unsigned int i=0; i<L-1; i++) {
+// printf("Weights%u,%u:\n", i+1, i);
+	// for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
+		// for (unsigned int x=0; x<layer_sizes[i]; x++) {
+			// printf("%.4f,", weights[i][y*layer_sizes[i]+x]);
+		// }
+		// printf("\n");
+	// }
+	// printf("\nBiases%u:\n", i+1);
+	// for (unsigned int y=0; y<layer_sizes[i+1]; y++) {
+		// printf("%.4f\n", biases[i][y]);
+	// }
+	// printf("\n");
+// }
+// end = time(NULL);
+// printf("Time to compute with pthreads = %u\n", ((unsigned int)(end-start)));
 }
 
 
@@ -194,7 +194,7 @@ end = time(NULL);
 printf("Time to compute with CUDA = %u\n", ((unsigned int)(end-start)));
 }*/
 
-// Test forward pass
+// Test forward pass !OK working!
 float **a, **z, *x, *a_D, *z_D;
 a = (float **)malloc((L-1)*sizeof(float *));
 z = (float **)malloc((L-1)*sizeof(float *));
@@ -225,15 +225,20 @@ for (unsigned int i=0; i<L-1; i++) {
 }
 
 //Read Input
-fp = fopen("../data/input.mydata", "r");
-if (fp == NULL) {
-	printf("Error opening file input.mydata.\nExiting...\n");
-	return -1;
+// fp = fopen("../data/input.mydata", "r");
+// if (fp == NULL) {
+	// printf("Error opening file input.mydata.\nExiting...\n");
+	// return -1;
+// }
+srand(time(NULL));
+for (unsigned int i=0; i<layer_sizes[0]; i++) {
+	x[i] = (float)rand()/(float)RAND_MAX;
 }
-if (fread(x, sizeof(float), layer_sizes[0], fp) != layer_sizes[0]) {
-	printf("Error reading input.mydata. Check if sizes of layers are correct.\nExiting...\n");
-	return -1;
-}
+// if (fread(x, sizeof(float), layer_sizes[0], fp) != layer_sizes[0]) {
+	// printf("Error reading input.mydata. Check if sizes of layers are correct.\nExiting...\n");
+	// return -1;
+// }
+start = time(NULL);
 for (unsigned int i=0; i<L-1; i++) {
 	cudaMalloc((void **)&weight_D, layer_sizes[i]*layer_sizes[i+1]*sizeof(float));
 	cudaMalloc((void **)&bias_D, layer_sizes[i+1]*sizeof(float));
@@ -260,36 +265,37 @@ for (unsigned int i=0; i<L-1; i++) {
 	cudaFree(a_D);
 	cudaFree(z_D);
 }
-
-// test output
-unsigned int max_layer=0;
-for (unsigned int i=0; i<L; i++) {
-	if (max_layer<layer_sizes[i]) {
-		max_layer = layer_sizes[i];
-	}
-}
-printf("z=\n");
-for (unsigned int i=0; i<max_layer; i++) {
-	for (unsigned int j=0; j<L-1; j++) {
-		if (i < layer_sizes[j+1]) {
-			printf("%.4f,",z[j][i]);
-		} else {
-			printf("       ");
-		}
-	}
-	printf("\n");
-}
-printf("a=\n");
-for (unsigned int i=0; i<max_layer; i++) {
-	for (unsigned int j=0; j<L-1; j++) {
-		if (i < layer_sizes[j+1]) {
-			printf("%.4f,",a[j][i]);
-		} else {
-			printf("       ");
-		}
-	}
-	printf("\n");
-}
+end = time(NULL);
+printf("time:%u\n", (unsigned int)(end-start));
+// test output OK for layer_sizes<1024!
+// unsigned int max_layer=0;
+// for (unsigned int i=0; i<L; i++) {
+	// if (max_layer<layer_sizes[i]) {
+		// max_layer = layer_sizes[i];
+	// }
+// }
+// printf("z=\n");
+// for (unsigned int i=0; i<max_layer; i++) {
+	// for (unsigned int j=0; j<L-1; j++) {
+		// if (i < layer_sizes[j+1]) {
+			// printf("%.4f,",z[j][i]);
+		// } else {
+			// printf("       ");
+		// }
+	// }
+	// printf("\n");
+// }
+// printf("a=\n");
+// for (unsigned int i=0; i<max_layer; i++) {
+	// for (unsigned int j=0; j<L-1; j++) {
+		// if (i < layer_sizes[j+1]) {
+			// printf("%.4f,",a[j][i]);
+		// } else {
+			// printf("       ");
+		// }
+	// }
+	// printf("\n");
+// }
 
 
 // do not forget to free
