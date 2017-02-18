@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
 unsigned int L, *layer_sizes;
 FILE *fp;
 time_t start, end;
-float **weights, **biases, *weight_D, *bias_D;
+float **weights, **biases, *weight_D, *bias_D, **a, **z, *x, *a_D, *z_D;
 
 {	// Parse arguments
 if (argc < 2) {
@@ -93,6 +93,11 @@ for (unsigned int i=0; i<L-1; i++) {
 	pthread_join(t_biases[i], NULL);
 }
 
+// free
+free(t_w_args);
+free(t_b_args);
+free(t_weights);
+free(t_biases);
 
 // debug !OK working
 // for (unsigned int i=0; i<L-1; i++) {
@@ -195,7 +200,6 @@ printf("Time to compute with CUDA = %u\n", ((unsigned int)(end-start)));
 }*/
 
 {// Test forward pass <1024 !OK working!
-float **a, **z, *x, *a_D, *z_D;
 a = (float **)malloc((L-1)*sizeof(float *));
 z = (float **)malloc((L-1)*sizeof(float *));
 x = (float *)malloc(layer_sizes[0]*sizeof(float));
@@ -311,5 +315,18 @@ printf("time:%u\n", (unsigned int)(end-start));
 }
 
 // do not forget to free
-
+cudaFree(weight_D);
+cudaFree(a_D);
+cudaFree(z_D);
+for (int i=0; i<L-1; i++) {
+	free(a[i]);
+	free(z[i]);
+	free(weights[i]);
+	free(biases[i]);
 }
+free(x);
+free(layer_sizes);
+free(a);
+free(z);
+free(weights);
+free(biases);
