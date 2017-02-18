@@ -194,7 +194,7 @@ end = time(NULL);
 printf("Time to compute with CUDA = %u\n", ((unsigned int)(end-start)));
 }*/
 
-// Test forward pass !OK working!
+{// Test forward pass <1024 !OK working!
 float **a, **z, *x, *a_D, *z_D;
 a = (float **)malloc((L-1)*sizeof(float *));
 z = (float **)malloc((L-1)*sizeof(float *));
@@ -224,31 +224,51 @@ for (unsigned int i=0; i<L-1; i++) {
 	}
 }
 
+// Allocate gpu memory
+unsigned int max_layer=0, max_weight=0;
+for (unsigned int i=0; i<L-1; i++) {
+	if (max_layer < layer_sizes[i]) {
+		max_layer = layer_sizes[i];
+	}
+	if (max_weight < layer_sizes[i]*layer_sizes[i+1]) {
+		max_weight = layer_sizes[i]*layer_sizes[i+1];
+	}
+}
+if (max_layer<layer_sizes[L]) max_layer = layer_sizes[L];
+if (cudaMalloc((void **)&a_D, max_layer*sizeof(float)) != cudaSuccess) {
+	printf("Could not allocate gpu memory to a_D.\nExiting...\n");
+	return -2;
+}
+if (cudaMalloc((void **)&z_D, max_layer*sizeof(float)) != cudaSuccess) {
+	printf("Could not allocate gpu memory to z_D.\nExiting...\n");
+	return -2;
+}
+if (cudaMalloc((void **)&weight_D, max_weight*sizeof(float)) != cudaSuccess) {
+	printf("Could not allocate gpu memory to weight_D.\nExiting...\n");
+	return -2;
+}
+if (cudaMalloc((void **)&bias_D, max_layer*sizeof(float)) != cudaSuccess) {
+	printf("Could not allocate gpu memory to bias_D.\nExiting...\n");
+	return -2;
+}
+srand(time(NULL));
+for (unsigned int i=0; i<layer_sizes[0]; i++) {
+	x[i] = (float)rand()/(float)RAND_MAX;
+}
 //Read Input
 // fp = fopen("../data/input.mydata", "r");
 // if (fp == NULL) {
 	// printf("Error opening file input.mydata.\nExiting...\n");
 	// return -1;
 // }
-srand(time(NULL));
-for (unsigned int i=0; i<layer_sizes[0]; i++) {
-	x[i] = (float)rand()/(float)RAND_MAX;
-}
 // if (fread(x, sizeof(float), layer_sizes[0], fp) != layer_sizes[0]) {
 	// printf("Error reading input.mydata. Check if sizes of layers are correct.\nExiting...\n");
 	// return -1;
 // }
 start = time(NULL);
 for (unsigned int i=0; i<L-1; i++) {
-	cudaMalloc((void **)&weight_D, layer_sizes[i]*layer_sizes[i+1]*sizeof(float));
-	cudaMalloc((void **)&bias_D, layer_sizes[i+1]*sizeof(float));
-	if (layer_sizes[i+1]>layer_sizes[i]) {
-		cudaMalloc((void **)&a_D, layer_sizes[i+1]*sizeof(float));
-		cudaMalloc((void **)&z_D, layer_sizes[i+1]*sizeof(float));		//for layer_size[i]>1024 z needs to be allocated differently
-	} else {
-		cudaMalloc((void **)&a_D, layer_sizes[i]*sizeof(float));
-		cudaMalloc((void **)&z_D, layer_sizes[i]*sizeof(float));
-	}
+	
+	
 	cudaMemcpy(weight_D, weights[i], layer_sizes[i]*layer_sizes[i+1]*sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(bias_D, biases[i], layer_sizes[i+1]*sizeof(float), cudaMemcpyHostToDevice);
 	if (i == 0) {
@@ -259,24 +279,16 @@ for (unsigned int i=0; i<L-1; i++) {
 	step_forward_wrapper(weight_D, bias_D, a_D, z_D, layer_sizes[i], layer_sizes[i+1]);
 	cudaMemcpy(z[i], z_D, layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(a[i], a_D, layer_sizes[i+1]*sizeof(float), cudaMemcpyDeviceToHost);
+	// printf("Layer %u\n", i);
 	
-	cudaFree(weight_D);
-	cudaFree(bias_D);
-	cudaFree(a_D);
-	cudaFree(z_D);
 }
 end = time(NULL);
 printf("time:%u\n", (unsigned int)(end-start));
 // test output OK for layer_sizes<1024!
-// unsigned int max_layer=0;
-// for (unsigned int i=0; i<L; i++) {
-	// if (max_layer<layer_sizes[i]) {
-		// max_layer = layer_sizes[i];
-	// }
-// }
-// printf("z=\n");
+
+// printf("zL=\n");
 // for (unsigned int i=0; i<max_layer; i++) {
-	// for (unsigned int j=0; j<L-1; j++) {
+	// for (unsigned int j=L-2; j<L-1; j++) {
 		// if (i < layer_sizes[j+1]) {
 			// printf("%.4f,",z[j][i]);
 		// } else {
@@ -285,9 +297,9 @@ printf("time:%u\n", (unsigned int)(end-start));
 	// }
 	// printf("\n");
 // }
-// printf("a=\n");
+// printf("aL=\n");
 // for (unsigned int i=0; i<max_layer; i++) {
-	// for (unsigned int j=0; j<L-1; j++) {
+	// for (unsigned int j=L-2; j<L-1; j++) {
 		// if (i < layer_sizes[j+1]) {
 			// printf("%.4f,",a[j][i]);
 		// } else {
@@ -296,7 +308,7 @@ printf("time:%u\n", (unsigned int)(end-start));
 	// }
 	// printf("\n");
 // }
-
+}
 
 // do not forget to free
 
