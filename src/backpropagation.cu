@@ -100,7 +100,7 @@ __global__ void step_forward2(float *z, float *bias, float *a, unsigned int laye
 	if (block_size >   2) { if (tid <   2) { partial_sums[tid] += partial_sums[tid+  2]; } __syncthreads(); }
 	if (tid <   1) {
 		partial_sums[0] += partial_sums[1] + bias[i];
-		z[i] =  partial_sums[0];
+		z[i] = partial_sums[0];
 		a[i] = 1/(1+expf(-partial_sums[0]));
 	}
 }
