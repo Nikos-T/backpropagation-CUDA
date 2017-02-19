@@ -260,13 +260,13 @@ if (cudaMalloc((void **)&bias_D, max_layer*sizeof(float)) != cudaSuccess) {
 	// x[i] = (float)rand()/(float)RAND_MAX;
 // }
 //Read Input
-fp = fopen("../data/input.mydata", "r");
+fp = fopen("../data/input.mydata", "rb");
 if (fp == NULL) {
 	printf("Error opening file input.mydata.\nExiting...\n");
 	return -1;
 }
 if (fread(x, sizeof(float), layer_sizes[0], fp) != layer_sizes[0]) {
-	printf("Error reading input.mydata. Check if sizes of layers are correct.\nExiting...\n");
+	printf("tse=%u\nError reading input.mydata. Check if sizes of layers are correct.\nExiting...\n", tse);
 	return -1;
 }
 fclose(fp);
@@ -274,7 +274,7 @@ fclose(fp);
 char file_dir[30];
 for (unsigned int i=0; i<L-1; i++) {
 	sprintf(file_dir, "../data/weights%u%u.mydata", i+2, i+1);
-	fp = fopen(file_dir, "r");
+	fp = fopen(file_dir, "rb");
 	if (fp == NULL) {
 		printf("Error opening file weights%u%u.mydata.\nExiting...\n", i+2, i+1);
 		return -1;
@@ -285,7 +285,7 @@ for (unsigned int i=0; i<L-1; i++) {
 	}
 	fclose(fp);
 	sprintf(file_dir, "../data/bias%u.mydata", i+2);
-	fp = fopen(file_dir, "r");
+	fp = fopen(file_dir, "rb");
 	if (fp == NULL) {
 		printf("Error opening file bias%u.mydata.\nExiting...\n", i+2);
 		return -1;
