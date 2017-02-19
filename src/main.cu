@@ -255,20 +255,20 @@ if (cudaMalloc((void **)&bias_D, max_layer*sizeof(float)) != cudaSuccess) {
 	printf("Could not allocate gpu memory to bias_D.\nExiting...\n");
 	return -2;
 }
-srand(time(NULL));
-for (unsigned int i=0; i<layer_sizes[0]; i++) {
-	x[i] = (float)rand()/(float)RAND_MAX;
-}
+// srand(time(NULL));
+// for (unsigned int i=0; i<layer_sizes[0]; i++) {
+	// x[i] = (float)rand()/(float)RAND_MAX;
+// }
 //Read Input
-// fp = fopen("../data/input.mydata", "r");
-// if (fp == NULL) {
-	// printf("Error opening file input.mydata.\nExiting...\n");
-	// return -1;
-// }
-// if (fread(x, sizeof(float), layer_sizes[0], fp) != layer_sizes[0]) {
-	// printf("Error reading input.mydata. Check if sizes of layers are correct.\nExiting...\n");
-	// return -1;
-// }
+fp = fopen("../data/input.mydata", "r");
+if (fp == NULL) {
+	printf("Error opening file input.mydata.\nExiting...\n");
+	return -1;
+}
+if (fread(x, sizeof(float), layer_sizes[0], fp) != layer_sizes[0]) {
+	printf("Error reading input.mydata. Check if sizes of layers are correct.\nExiting...\n");
+	return -1;
+}
 start = time(NULL);
 for (unsigned int i=0; i<L-1; i++) {
 	
@@ -290,28 +290,28 @@ end = time(NULL);
 printf("time:%u\n", (unsigned int)(end-start));
 // test output OK for layer_sizes<1024!
 
-// printf("zL=\n");
-// for (unsigned int i=0; i<max_layer; i++) {
-	// for (unsigned int j=L-2; j<L-1; j++) {
-		// if (i < layer_sizes[j+1]) {
-			// printf("%.4f,",z[j][i]);
-		// } else {
-			// printf("       ");
-		// }
-	// }
-	// printf("\n");
-// }
-// printf("aL=\n");
-// for (unsigned int i=0; i<max_layer; i++) {
-	// for (unsigned int j=L-2; j<L-1; j++) {
-		// if (i < layer_sizes[j+1]) {
-			// printf("%.4f,",a[j][i]);
-		// } else {
-			// printf("       ");
-		// }
-	// }
-	// printf("\n");
-// }
+printf("zL=\n");
+for (unsigned int i=0; i<max_layer; i++) {
+	for (unsigned int j=L-2; j<L-1; j++) {
+		if (i < layer_sizes[j+1]) {
+			printf("%.4f,",z[j][i]);
+		} else {
+			printf("       ");
+		}
+	}
+	printf("\n");
+}
+printf("aL=\n");
+for (unsigned int i=0; i<max_layer; i++) {
+	for (unsigned int j=L-2; j<L-1; j++) {
+		if (i < layer_sizes[j+1]) {
+			printf("%.4f,",a[j][i]);
+		} else {
+			printf("       ");
+		}
+	}
+	printf("\n");
+}
 }
 
 // do not forget to free
@@ -330,3 +330,5 @@ free(a);
 free(z);
 free(weights);
 free(biases);
+
+}
